@@ -12,13 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // PERBAIKAN: Mengarahkan alias 'role' secara spesifik ke class CheckRole
-        $middleware->alias([
-            'role' => \App\Http\Middleware\CheckRole::class
-        ]);
+        // Percayai semua proxy (diperlukan untuk Railway HTTPS)
+        $middleware->trustProxies(at: '*');
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
-        );
+    ->withExceptions(function (Exceptions $exceptions) {
+        //
     })->create();
