@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +20,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Kosongkan bagian ini dari kode rate limiter & event sebelumnya
+        // Paksa HTTPS jika di environment production / Railway
+        if (config('app.env') === 'production' || app()->environment('production')) {
+            URL::forceScheme('https');
+        }
     }
 }
