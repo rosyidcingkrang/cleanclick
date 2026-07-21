@@ -53,13 +53,13 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        // 💡 Ambil prefix email dan bersihkan karakter khusus agar jadi username valid
+        // 💡 Ambil prefix email sebagai username otomatis untuk memenuhi NOT NULL constraint di PostgreSQL
         $cleanEmailPrefix = Str::slug(explode('@', $request->email)[0], '');
         $baseUsername     = $cleanEmailPrefix ?: 'user';
         $username         = $baseUsername;
         $counter          = 1;
 
-        // Cek keunikan username di PostgreSQL
+        // Mencegah duplicate username
         while (User::where('username', $username)->exists()) {
             $username = $baseUsername . $counter;
             $counter++;
@@ -67,7 +67,7 @@ class AuthController extends Controller
 
         User::create([
             'name'     => $request->name,
-            'username' => $username,
+            'username' => $username, // Field username aman dari null
             'email'    => $request->email,
             'password' => Hash::make($request->password),
             'role'     => 'user', 
@@ -81,7 +81,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
         return redirect()->route('landing');
     }
 }
