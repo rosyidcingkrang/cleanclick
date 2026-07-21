@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -17,7 +18,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => 'required|email',
+            'email'    => 'required|email',
             'password' => 'required',
         ]);
 
@@ -47,17 +48,18 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        // 💡 Ambil prefix email sebagai username otomatis untuk memenuhi NOT NULL constraint
-        $baseUsername = explode('@', $request->email)[0];
-        $username = $baseUsername;
-        $counter = 1;
+        // 💡 Ambil prefix email dan bersihkan karakter khusus agar jadi username valid
+        $cleanEmailPrefix = Str::slug(explode('@', $request->email)[0], '');
+        $baseUsername     = $cleanEmailPrefix ?: 'user';
+        $username         = $baseUsername;
+        $counter          = 1;
 
-        // Mencegah duplicate username jika ada yang memiliki email prefix sama
+        // Cek keunikan username di PostgreSQL
         while (User::where('username', $username)->exists()) {
             $username = $baseUsername . $counter;
             $counter++;
@@ -65,7 +67,7 @@ class AuthController extends Controller
 
         User::create([
             'name'     => $request->name,
-            'username' => $username, // Field username sudah terisi
+            'username' => $username,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
             'role'     => 'user', 
@@ -79,6 +81,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+        
         return redirect()->route('landing');
     }
 }
