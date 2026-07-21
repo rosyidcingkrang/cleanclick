@@ -52,11 +52,23 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
+        // 💡 Ambil prefix email sebagai username otomatis untuk memenuhi NOT NULL constraint
+        $baseUsername = explode('@', $request->email)[0];
+        $username = $baseUsername;
+        $counter = 1;
+
+        // Mencegah duplicate username jika ada yang memiliki email prefix sama
+        while (User::where('username', $username)->exists()) {
+            $username = $baseUsername . $counter;
+            $counter++;
+        }
+
         User::create([
-            'name' => $request->name,
-            'email' => $request->email,
+            'name'     => $request->name,
+            'username' => $username, // Field username sudah terisi
+            'email'    => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'user', 
+            'role'     => 'user', 
         ]);
 
         return redirect()->route('login')->with('success', 'Registrasi berhasil! Silakan login.');
