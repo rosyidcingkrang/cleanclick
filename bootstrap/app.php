@@ -3,7 +3,6 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,8 +11,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Percayai semua proxy (diperlukan untuk Railway HTTPS)
+        // 1. Trust proxies untuk HTTPS Railway
         $middleware->trustProxies(at: '*');
+
+        // 2. Daftarkan alias middleware 'role' di sini:
+        $middleware->alias([
+            'role' => \App\Http\Middleware\RoleMiddleware::class, // Sesuaikan dengan nama class middleware role kamu
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
