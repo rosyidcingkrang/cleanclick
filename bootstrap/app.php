@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // 2. Daftarkan alias middleware 'role' di sini:
         $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class, // Sesuaikan dengan nama class middleware role kamu
+            'role' => \App\Http\Middleware\CheckRole::class, // Sesuaikan dengan nama class middleware role kamu
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
