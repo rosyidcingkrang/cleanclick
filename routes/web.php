@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
-use App\Http\Controllers\Auth\AdminAuthController; // ◄ DIUBAH: Sesuaikan dengan letak subfolder Auth
 use App\Http\Controllers\ComplaintController;
 
 // ==========================================
@@ -15,13 +14,13 @@ Route::post('/cek-laundry', [DashboardController::class, 'cekProgresCucian'])->n
 
 
 // ==========================================
-// 2. GERBANG KHUSUS ADMIN (TERPISAH & BEBAS MENTAL)
+// 2. GERBANG AUTENTIKASI ADMIN
 // ==========================================
-Route::get('admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
-Route::post('admin/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
+Route::get('admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');
+Route::post('admin/login', [AuthController::class, 'adminLogin'])->name('admin.login.submit');
 
-Route::get('admin/register', [AdminAuthController::class, 'showRegister'])->name('admin.register');
-Route::post('admin/register', [AdminAuthController::class, 'register'])->name('admin.register.submit');
+Route::get('admin/register', [AuthController::class, 'showAdminRegister'])->name('admin.register');
+Route::post('admin/register', [AuthController::class, 'adminRegister'])->name('admin.register.submit');
 
 
 // ==========================================
@@ -33,7 +32,7 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
 Route::post('/register', [AuthController::class, 'register']);
 
-// Jalur Keluar (Logout) - Berlaku universal bagi yang sudah login
+// Jalur Keluar (Logout)
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 Route::get('/logout', [AuthController::class, 'logout'])->middleware('auth'); // Jalur darurat via URL
 
@@ -49,46 +48,32 @@ Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'
 
 
 // ==========================================
-// 5. JALUR DASHBOARD ADMIN (TERPROTEKSI MIDDLEWARE)
+// 5. JALUR DASHBOARD & FITUR ADMIN (TERPROTEKSI)
 // ==========================================
-Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'adminDashboard'])->name('admin.dashboard');
-    Route::post('/transaksi', [DashboardController::class, 'storeTransaksi'])->name('admin.transaksi.store');
-    Route::post('/transaksi/update/{id}', [DashboardController::class, 'update'])->name('admin.transaksi.update');
-    Route::get('/transaksi/email/{id}', [DashboardController::class, 'kirimEmail'])->name('admin.transaksi.email');
-    Route::delete('/transaksi/delete/{id}', [DashboardController::class, 'destroy'])->name('admin.transaksi.destroy');
-    Route::post('/pelanggan/store', [DashboardController::class, 'storePelanggan'])->name('admin.pelanggan.store');
-});
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Management Transaksi & Pelanggan
+    Route::get('/dashboard', [DashboardController::class, 'adminDashboard'])->name('dashboard');
+    Route::post('/transaksi', [DashboardController::class, 'storeTransaksi'])->name('transaksi.store');
+    Route::post('/transaksi/update/{id}', [DashboardController::class, 'update'])->name('transaksi.update');
+    Route::get('/transaksi/email/{id}', [DashboardController::class, 'kirimEmail'])->name('transaksi.email');
+    Route::delete('/transaksi/delete/{id}', [DashboardController::class, 'destroy'])->name('transaksi.destroy');
+    Route::post('/pelanggan/store', [DashboardController::class, 'storePelanggan'])->name('pelanggan.store');
 
-
-// ==========================================
-// 6. JALUR DASHBOARD PELANGGAN / USER
-// ==========================================
-Route::middleware(['auth', 'role:user'])->prefix('user')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'userDashboard'])->name('user.dashboard');
-    Route::post('/transaksi/store', [DashboardController::class, 'storeTransaksi'])->name('user.transaksi.store');
-});
-
-
-// Route untuk Halaman User
-Route::middleware(['auth'])->group(function () {
-    Route::get('/komplain', [ComplaintController::class, 'indexUser'])->name('user.komplain');
-    Route::post('/komplain/kirim', [ComplaintController::class, 'storeUser'])->name('user.komplain.store');
-});
-
-// Route untuk Halaman Admin
-Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Management Komplain (Sisi Admin)
     Route::get('/komplain', [ComplaintController::class, 'indexAdmin'])->name('komplain.index');
     Route::get('/komplain/chat/{userId}', [ComplaintController::class, 'detailAdmin'])->name('komplain.detail');
     Route::post('/komplain/chat/{userId}/balas', [ComplaintController::class, 'storeAdmin'])->name('komplain.store');
 });
 
 
-// Pastikan route komplain ada di DALAM grup middleware auth ini
-Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+// ==========================================
+// 6. JALUR DASHBOARD & FITUR PELANGGAN / USER
+// ==========================================
+Route::middleware(['auth', 'role:user'])->prefix('user')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'userDashboard'])->name('user.dashboard');
+    Route::post('/transaksi/store', [DashboardController::class, 'storeTransaksi'])->name('user.transaksi.store');
     
-    // Route komplain harus di sini agar tahu SIAPA user yang sedang chat
+    // Fitur Komplain Pelanggan
     Route::get('/komplain', [ComplaintController::class, 'indexUser'])->name('user.komplain');
     Route::post('/komplain/kirim', [ComplaintController::class, 'storeUser'])->name('user.komplain.store');
 });

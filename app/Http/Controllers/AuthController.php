@@ -10,6 +10,10 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    // ==========================================
+    // 👤 ALUR AUTHENTICATION USER (PELANGGAN)
+    // ==========================================
+
     public function showLogin()
     {
         return view('auth.login'); 
@@ -28,10 +32,10 @@ class AuthController extends Controller
             return redirect()->route('user.dashboard'); 
         }
 
-        // 🔍 Deteksi Admin salah kamar: Berikan peringatan tegas!
+        // 🔍 Deteksi Admin salah kamar: Berikan peringatan
         if (Auth::validate(array_merge($credentials, ['role' => 'admin']))) {
             return back()->withErrors([
-                'email' => 'Akun Admin terdeteksi! Demi keamanan, silakan masuk melalui halaman Login Internal Admin.',
+                'email' => 'Akun Admin terdeteksi! Silakan masuk melalui halaman Login Admin.',
             ])->onlyInput('email');
         }
 
@@ -53,21 +57,12 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        // 💡 Ambil prefix email sebagai username otomatis untuk memenuhi NOT NULL constraint di PostgreSQL
-        $cleanEmailPrefix = Str::slug(explode('@', $request->email)[0], '');
-        $baseUsername     = $cleanEmailPrefix ?: 'user';
-        $username         = $baseUsername;
-        $counter          = 1;
-
-        // Mencegah duplicate username
-        while (User::where('username', $username)->exists()) {
-            $username = $baseUsername . $counter;
-            $counter++;
-        }
+        // 💡 Generate username otomatis untuk role 'user'
+        $username = $this->generateUniqueUsername($request->email);
 
         User::create([
             'name'     => $request->name,
-            'username' => $username, // Field username aman dari null
+            'username' => $username,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
             'role'     => 'user', 
@@ -76,6 +71,65 @@ class AuthController extends Controller
         return redirect()->route('login')->with('success', 'Registrasi berhasil! Silakan login.');
     }
 
+    // ==========================================
+    // 🛡️ ALUR AUTHENTICATION ADMIN
+    // ==========================================
+
+    public function showAdminLogin()
+    {
+        return view('auth.admin-login'); // Sesuaikan nama view login admin kamu
+    }
+
+    public function adminLogin(Request $request)
+    {
+        $credentials = $request->validate([
+            'email'    => 'required|email',
+            'password' => 'required',
+        ]);
+
+        if (Auth::attempt(array_merge($credentials, ['role' => 'admin']))) {
+            $request->session()->regenerate();
+            return redirect()->route('admin.dashboard');
+        }
+
+        return back()->withErrors([
+            'email' => 'Email atau password Admin salah.',
+        ])->onlyInput('email');
+    }
+
+    public function showAdminRegister()
+    {
+        return view('auth.admin-register'); // Sesuaikan nama view register admin kamu
+    }
+
+    public function adminRegister(Request $request)
+    {
+        $request->validate([
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        // 💡 Generate username otomatis untuk role 'admin'
+        $username = $this->generateUniqueUsername($request->email);
+
+        $admin = User::create([
+            'name'     => $request->name,
+            'username' => $username,
+            'email'    => $request->email,
+            'role'     => 'admin',
+            'password' => Hash::make($request->password),
+        ]);
+
+        Auth::login($admin);
+
+        return redirect()->route('admin.dashboard')->with('success', 'Akun Admin Baru Berhasil Didaftarkan!');
+    }
+
+    // ==========================================
+    // 🚪 LOGOUT & HELPER
+    // ==========================================
+
     public function logout(Request $request)
     {
         Auth::logout();
@@ -83,5 +137,23 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('landing');
+    }
+
+    /**
+     * Helper privat untuk membuat username unik otomatis dari email
+     */
+    private function generateUniqueUsername(string $email): string
+    {
+        $cleanEmailPrefix = Str::slug(explode('@', $email)[0], '');
+        $baseUsername     = $cleanEmailPrefix ?: 'user';
+        $username         = $baseUsername;
+        $counter          = 1;
+
+        while (User::where('username', $username)->exists()) {
+            $username = $baseUsername . $counter;
+            $counter++;
+        }
+
+        return $username;
     }
 }
