@@ -107,7 +107,7 @@ class DashboardController extends Controller
         $transaksi->quantity         = $request->quantity;
         $transaksi->total_harga      = $totalHarga; 
         $transaksi->status_pembayaran = $request->status_pembayaran;
-        $transaksi->metode_pembayaran = $request->metode_pembayaran;
+        $transaksi->metode_pembayaran = ucfirst(strtolower($request->metode_pembayaran));
         $transaksi->status_cucian     = 'Antrean';
         
         // Otomatisasi Nomor Nota Aman (Mencegah Duplikasi/Crash jika ada order yang pernah dihapus)
