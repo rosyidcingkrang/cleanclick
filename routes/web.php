@@ -13,7 +13,7 @@ use App\Http\Controllers\ComplaintController;
 */
 Route::get('/', [DashboardController::class, 'landingPage'])->name('landing');
 
-// Menambahkan alias nama route 'cek.progres' dan 'laundry.cek' agar kompatibel dengan berbagai view
+// Alias nama route untuk cek progres cucian
 Route::post('/cek-laundry', [DashboardController::class, 'cekProgresCucian'])->name('laundry.cek');
 Route::post('/cek-progres', [DashboardController::class, 'cekProgresCucian'])->name('cek.progres');
 

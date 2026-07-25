@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Transaksi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -61,7 +62,6 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        // 💡 Generate username otomatis untuk role 'user'
         $username = $this->generateUniqueUsername($request->email);
 
         User::create([
@@ -81,7 +81,6 @@ class AuthController extends Controller
 
     public function showAdminLogin()
     {
-        // Mengecek apakah view berada di auth.admin-login atau admin.login
         if (view()->exists('auth.admin-login')) {
             return view('auth.admin-login');
         }
@@ -104,7 +103,6 @@ class AuthController extends Controller
             }
         }
 
-        // 🔍 Deteksi Pelanggan/User biasa mencoba login dari portal Admin
         if ($user && in_array($user->role, ['user', 'pelanggan'])) {
             return back()->withErrors([
                 'email' => 'Akun Pelanggan terdeteksi! Silakan login melalui halaman utama.',
@@ -132,7 +130,6 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        // 💡 Generate username otomatis untuk role 'admin'
         $username = $this->generateUniqueUsername($request->email);
 
         $admin = User::create([
@@ -149,6 +146,38 @@ class AuthController extends Controller
     }
 
     // ==========================================
+    // 📊 DASHBOARD MANAGEMENT (ADMIN & USER)
+    // ==========================================
+
+    public function adminDashboard(Request $request)
+    {
+        // Tangkap tanggal filter, jika kosong default ke tanggal hari ini
+        $selectedDate = $request->input('tanggal', date('Y-m-d'));
+
+        // Hitung pendapatan berdasarkan TANGGAL DIPILIH
+        $totalPendapatan = Transaksi::whereDate('created_at', $selectedDate)
+            ->where('status_pembayaran', 'Lunas')
+            ->sum('total_harga');
+
+        // Ambil SEMUA transaksi/antrean (termasuk kemarin & hari-hari sebelumnya)
+        $antreanBerjalan = Transaksi::with(['user', 'layanan'])
+            ->latest()
+            ->get();
+
+        return view('admin.dashboard', compact('totalPendapatan', 'antreanBerjalan', 'selectedDate'));
+    }
+
+    public function userDashboard()
+    {
+        // Riwayat transaksi khusus user yang sedang login
+        $transaksiUser = Transaksi::where('user_id', Auth::id())
+            ->latest()
+            ->get();
+
+        return view('user.dashboard', compact('transaksiUser'));
+    }
+
+    // ==========================================
     // 🚪 LOGOUT & HELPER
     // ==========================================
 
@@ -161,9 +190,6 @@ class AuthController extends Controller
         return redirect()->route('landing');
     }
 
-    /**
-     * Helper privat untuk membuat username unik otomatis dari email
-     */
     private function generateUniqueUsername(string $email): string
     {
         $cleanEmailPrefix = Str::slug(explode('@', $email)[0], '');

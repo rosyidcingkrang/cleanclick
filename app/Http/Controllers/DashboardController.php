@@ -21,13 +21,12 @@ class DashboardController extends Controller
     {
         $request->validate([
             'nama_pelanggan' => 'required|string|max:100',
-            'nomor_nota'     => 'required|string|max:50', // Diubah ke string karena format nota: INV-YYYYMMDD-01
+            'nomor_nota'     => 'required|string|max:50',
         ]);
 
         $nama = trim($request->input('nama_pelanggan'));
         $nota = trim($request->input('nomor_nota'));
 
-        // Mencari berdasarkan no_nota atau id_transaksi (mencakup pencarian jika user hanya memasukkan angka ID)
         $hasilTransaksi = Transaksi::with(['user', 'layanan'])
             ->where(function ($q) use ($nota) {
                 $q->where('no_nota', $nota)
@@ -51,25 +50,31 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function adminDashboard()
+    public function adminDashboard(Request $request)
     {
-        // Menghitung total pendapatan hari ini dari transaksi lunas
-        $totalPendapatanHariIni = Transaksi::whereDate('tanggal', now()->today())
+        // 1. Tangkap tanggal dari form filter (jika kosong, default ke tanggal hari ini)
+        $selectedDate = $request->input('tanggal', date('Y-m-d'));
+
+        // 2. Menghitung total pendapatan BERDASARKAN TANGGAL YANG DIPILIH
+        $totalPendapatanHariIni = Transaksi::where(function ($q) use ($selectedDate) {
+                $q->whereDate('tanggal', $selectedDate)
+                  ->orWhereDate('created_at', $selectedDate);
+            })
             ->where('status_pembayaran', 'Lunas')
             ->sum('total_harga');
 
+        // 3. Menampilkan SEMUA transaksi/antrean (termasuk kemarin & hari-hari sebelumnya)
         $transaksi = Transaksi::with(['user', 'layanan'])
             ->orderBy('id_transaksi', 'desc')
             ->get();
             
         $layanan = Layanan::all();
         
-        // Mengambil semua user dengan role 'user' atau 'pelanggan'
         $pelanggan = User::whereIn('role', ['user', 'pelanggan'])
             ->orderBy('name', 'asc')
             ->get();
 
-        return view('admin.dashboard', compact('totalPendapatanHariIni', 'transaksi', 'layanan', 'pelanggan'));
+        return view('admin.dashboard', compact('totalPendapatanHariIni', 'transaksi', 'layanan', 'pelanggan', 'selectedDate'));
     }
 
     public function userDashboard()
@@ -88,7 +93,7 @@ class DashboardController extends Controller
     {
         $request->validate([
             'user_id'           => 'nullable|exists:users,id',
-            'id_layanan' => 'required|exists:layanan,id_layanan',
+            'id_layanan'        => 'required|exists:layanan,id_layanan',
             'quantity'          => 'required|numeric|min:0.1',
             'status_pembayaran' => 'required|string',
             'metode_pembayaran' => 'required|string',
@@ -99,18 +104,16 @@ class DashboardController extends Controller
 
         $transaksi = new Transaksi();
         
-        // JIKA DIINPUT ADMIN: Gunakan user_id dari form.
-        // JIKA DIINPUT USER: Gunakan auth()->id().
         $transaksi->user_id = $request->filled('user_id') ? $request->user_id : auth()->id(); 
         
-        $transaksi->id_layanan       = $request->id_layanan;
-        $transaksi->quantity         = $request->quantity;
-        $transaksi->total_harga      = $totalHarga; 
+        $transaksi->id_layanan        = $request->id_layanan;
+        $transaksi->quantity          = $request->quantity;
+        $transaksi->total_harga       = $totalHarga; 
         $transaksi->status_pembayaran = $request->status_pembayaran;
         $transaksi->metode_pembayaran = ucfirst(strtolower($request->metode_pembayaran));
         $transaksi->status_cucian     = 'Antrean';
         
-        // Otomatisasi Nomor Nota Aman (Mencegah Duplikasi/Crash jika ada order yang pernah dihapus)
+        // Otomatisasi Nomor Nota
         $hariIni = now()->format('Ymd');
         $transaksiTerakhirHariIni = Transaksi::whereDate('created_at', now()->today())
             ->orderBy('id_transaksi', 'desc')
@@ -166,7 +169,6 @@ class DashboardController extends Controller
         $pelanggan->whatsapp = $request->whatsapp;
         $pelanggan->role     = 'user'; 
         
-        // Membuat Email unik berbasis timestamp + random string kecil
         $pelanggan->email    = 'offline_' . time() . rand(10, 99) . '@cleanclick.com';
         $pelanggan->password = bcrypt('cleanclick123'); 
         
