@@ -26,11 +26,11 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        // 🛡️ Mengizinkan login untuk user dengan role 'user' ataupun 'pelanggan'
         $user = User::where('email', $credentials['email'])->first();
 
+        // 🛡️ Mengizinkan login untuk user dengan role 'user' ataupun 'pelanggan'
         if ($user && in_array($user->role, ['user', 'pelanggan'])) {
-            if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
+            if (Auth::attempt($credentials)) {
                 $request->session()->regenerate();
                 return redirect()->route('user.dashboard'); 
             }

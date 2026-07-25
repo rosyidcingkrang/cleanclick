@@ -22,6 +22,13 @@
             </form>
         </div>
 
+        <form action="{{ route('admin.dashboard') }}" method="GET" class="flex items-center gap-2 mb-4">
+    <input type="date" name="filter_date" value="{{ request('filter_date', date('Y-m-d')) }}" class="border border-slate-300 p-2 rounded-lg text-sm">
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+        Filter Tanggal
+    </button>
+</form>
+
         <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-6 rounded-2xl shadow-md mb-8">
             <span class="text-xs uppercase tracking-widest font-bold opacity-75">Laporan Keuangan Hari Ini (Lunas)</span>
             <h2 class="text-4xl font-black mt-1">Rp {{ number_format($totalPendapatanHariIni, 0, ',', '.') }}</h2>
