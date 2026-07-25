@@ -26,14 +26,18 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        // 🛡️ Kunci gerbang utama pelanggan: hanya boleh role 'user'
-        if (Auth::attempt(array_merge($credentials, ['role' => 'user']))) {
-            $request->session()->regenerate();
-            return redirect()->route('user.dashboard'); 
+        // 🛡️ Mengizinkan login untuk user dengan role 'user' ataupun 'pelanggan'
+        $user = User::where('email', $credentials['email'])->first();
+
+        if ($user && in_array($user->role, ['user', 'pelanggan'])) {
+            if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
+                $request->session()->regenerate();
+                return redirect()->route('user.dashboard'); 
+            }
         }
 
-        // 🔍 Deteksi Admin salah kamar: Berikan peringatan
-        if (Auth::validate(array_merge($credentials, ['role' => 'admin']))) {
+        // 🔍 Deteksi Admin salah kamar
+        if ($user && $user->role === 'admin') {
             return back()->withErrors([
                 'email' => 'Akun Admin terdeteksi! Silakan masuk melalui halaman Login Admin.',
             ])->onlyInput('email');
@@ -77,7 +81,11 @@ class AuthController extends Controller
 
     public function showAdminLogin()
     {
-        return view('auth.admin-login'); // Sesuaikan nama view login admin kamu
+        // Mengecek apakah view berada di auth.admin-login atau admin.login
+        if (view()->exists('auth.admin-login')) {
+            return view('auth.admin-login');
+        }
+        return view('admin.login');
     }
 
     public function adminLogin(Request $request)
@@ -87,9 +95,20 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        if (Auth::attempt(array_merge($credentials, ['role' => 'admin']))) {
-            $request->session()->regenerate();
-            return redirect()->route('admin.dashboard');
+        $user = User::where('email', $credentials['email'])->first();
+
+        if ($user && $user->role === 'admin') {
+            if (Auth::attempt($credentials)) {
+                $request->session()->regenerate();
+                return redirect()->route('admin.dashboard');
+            }
+        }
+
+        // 🔍 Deteksi Pelanggan/User biasa mencoba login dari portal Admin
+        if ($user && in_array($user->role, ['user', 'pelanggan'])) {
+            return back()->withErrors([
+                'email' => 'Akun Pelanggan terdeteksi! Silakan login melalui halaman utama.',
+            ])->onlyInput('email');
         }
 
         return back()->withErrors([
@@ -99,7 +118,10 @@ class AuthController extends Controller
 
     public function showAdminRegister()
     {
-        return view('auth.admin-register'); // Sesuaikan nama view register admin kamu
+        if (view()->exists('auth.admin-register')) {
+            return view('auth.admin-register');
+        }
+        return view('admin.register');
     }
 
     public function adminRegister(Request $request)
@@ -145,7 +167,7 @@ class AuthController extends Controller
     private function generateUniqueUsername(string $email): string
     {
         $cleanEmailPrefix = Str::slug(explode('@', $email)[0], '');
-        $baseUsername     = $cleanEmailPrefix ?: 'user';
+        $baseUsername     = !empty($cleanEmailPrefix) ? $cleanEmailPrefix : 'user';
         $username         = $baseUsername;
         $counter          = 1;
 
