@@ -88,7 +88,7 @@ class DashboardController extends Controller
     {
         $request->validate([
             'user_id'           => 'nullable|exists:users,id',
-            'id_layanan'        => 'required|exists:layanan,id', // Diperketat dengan cek ke DB
+            'id_layanan' => 'required|exists:layanan,id_layanan',
             'quantity'          => 'required|numeric|min:0.1',
             'status_pembayaran' => 'required|string',
             'metode_pembayaran' => 'required|string',
