@@ -68,18 +68,19 @@
                     </div>
                     
                     <!-- Input Jumlah / Berat dengan badge dinamis -->
-                    <div>
-                        <label id="labelQuantity" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                            Jumlah / Berat <span class="text-red-500">*</span>
-                        </label>
-                        <div class="relative flex items-center">
-                            <input type="number" name="quantity" id="quantityInput" step="0.1" min="0.1" class="w-full border border-slate-200 bg-slate-50/50 p-3 pr-16 rounded-xl text-sm focus:outline-blue-500 text-slate-800" placeholder="1" required>
-                            <span id="unitBadge" class="absolute right-3 text-xs font-bold text-slate-400 bg-slate-200/60 px-2.5 py-1 rounded-md pointer-events-none transition-all">
-                                Kg | Pcs
-                            </span>
-                        </div>
-                        <span class="text-[10px] text-slate-400 mt-1 block">*Nilai harus lebih besar dari 0</span>
-                    </div>
+<div>
+    <label id="labelQuantity" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+        JUMLAH (PCS) <span class="text-red-500">*</span>
+    </label>
+    <div class="relative flex items-center">
+        <!-- step="1" dan min="1" memastikan input wajib bilangan bulat -->
+        <input type="number" name="quantity" id="quantityInput" step="1" min="1" class="w-full border border-slate-200 bg-slate-50/50 p-3 pr-16 rounded-xl text-sm focus:outline-blue-500 text-slate-800" placeholder="1" required>
+        <span id="unitBadge" class="absolute right-3 text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md pointer-events-none transition-all">
+            Pcs
+        </span>
+    </div>
+    <span class="text-[10px] text-slate-400 mt-1 block">*Masukkan jumlah dalam satuan Pcs (minimal 1)</span>
+</div>
                 </div>
 
                 <div class="grid md:grid-cols-2 gap-4">
