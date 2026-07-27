@@ -1,0 +1,71 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Dependencies
+vendor/
+node_modules/
+composer.lock
+package-lock.json
+yarn.lock
+
+# Laravel specific
+storage/
+storage/*.log
+storage/framework/
+storage/logs/
+public/storage
+public/hot
+public/hot-assets.json
+
+# Tests
+tests/
+phpunit.xml
+.phpunit.result.cache
+
+# Logs
+*.log
+*.sqlite
+*.sqlite-journal
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.phpstorm.meta.php
+.editorconfig
+
+# Build tools
+docker-compose.yml
+docker-compose.override.yml
+Dockerfile
+.dockerignore
+
+# Documentation
+README.md
+CHANGELOG.md
+LICENSE
+*.md
+
+# Misc
+*.cache
+*.tmp
+*.temp
+.php-cs-fixer.php
+.php-version
+.pint.json
+
+# CI/CD
+.github/
+.gitlab/
+.ci/
