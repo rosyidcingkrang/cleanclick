@@ -167,6 +167,7 @@
                                 
                                 <td class="p-3">
                                     <div class="flex items-center gap-2 justify-center">
+                                        {{-- 1. Form Simpan Status Cucian --}}
                                         <form action="{{ route('admin.transaksi.update', $t->id_transaksi ?? $t->id) }}" method="POST" class="inline">
                                             @csrf
                                             @method('PUT')
@@ -184,6 +185,24 @@
                                             </div>
                                         </form>
 
+                                        {{-- 2. Form Toggle Status Pembayaran (Lunas / Belum Lunas) --}}
+                                        <form action="{{ route('admin.transaksi.update', $t->id_transaksi ?? $t->id) }}" method="POST" class="inline">
+                                            @csrf
+                                            @method('PUT')
+                                            @if($t->status_pembayaran == 'Lunas')
+                                                <input type="hidden" name="status_pembayaran" value="Belum Lunas">
+                                                <button type="submit" title="Ubah ke Belum Lunas" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1">
+                                                    💵 Ubah
+                                                </button>
+                                            @else
+                                                <input type="hidden" name="status_pembayaran" value="Lunas">
+                                                <button type="submit" title="Tandai Lunas" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1">
+                                                    ✅ Lunas
+                                                </button>
+                                            @endif
+                                        </form>
+
+                                        {{-- 3. Form Hapus Transaksi --}}
                                         <form action="{{ route('admin.transaksi.destroy', $t->id_transaksi ?? $t->id) }}" method="POST" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus orderan ini?')">
                                             @csrf
                                             @method('DELETE')
@@ -207,7 +226,7 @@
         </div>
     </div>
 
-    {{-- Modal Modal Pelanggan Baru --}}
+    {{-- Modal Pelanggan Baru --}}
     <div id="modalPelanggan" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center hidden z-50">
         <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-xl max-w-md w-full mx-4">
             <div class="flex justify-between items-center mb-4">

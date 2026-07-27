@@ -22,7 +22,7 @@ class DashboardController extends Controller
     {
         $request->validate([
             'nama_pelanggan' => 'required|string|max:100',
-            'nomor_nota'      => 'required|string|max:50',
+            'nomor_nota'     => 'required|string|max:50',
         ]);
 
         $nama = trim($request->input('nama_pelanggan'));
@@ -47,7 +47,7 @@ class DashboardController extends Controller
         return view('landing', [
             'cucian'         => $hasilTransaksi,
             'nama_pelanggan' => $nama,
-            'nomor_nota'      => $nota,
+            'nomor_nota'     => $nota,
         ]);
     }
 
@@ -56,7 +56,7 @@ class DashboardController extends Controller
         // 1. Tangkap tanggal filter (default hari ini)
         $selectedDate = $request->input('tanggal', now()->format('Y-m-d'));
 
-        // 2. Total pendapatan hari/tanggal terpilih (Optimasi query date)
+        // 2. Total pendapatan hari/tanggal terpilih
         $totalPendapatanHariIni = Transaksi::whereDate('tanggal', $selectedDate)
             ->where('status_pembayaran', 'Lunas')
             ->sum('total_harga');
@@ -103,17 +103,14 @@ class DashboardController extends Controller
             'metode_pembayaran' => 'required|string',
         ]);
 
-        // Gunakan Database Transaction untuk mencegah race condition / nota duplikat
         DB::transaction(function () use ($request) {
             $layanan = Layanan::findOrFail($request->id_layanan);
             $totalHarga = $layanan->harga_satuan * $request->quantity;
 
-            // Proteksi: Jika bukan admin, paksa user_id milik user yang sedang login
             $userId = auth()->user()->role === 'admin' && $request->filled('user_id')
                 ? $request->user_id
                 : auth()->id();
 
-            // Otomatisasi Nomor Nota dengan Lock untuk keamanan concurrency
             $hariIni = now()->format('Ymd');
             $transaksiTerakhirHariIni = Transaksi::whereDate('created_at', now()->today())
                 ->lockForUpdate()
@@ -145,17 +142,31 @@ class DashboardController extends Controller
         return redirect()->back()->with('success', 'Transaksi Laundry Baru Berhasil Disimpan!');
     }
 
+    /**
+     * Memperbarui Status Cucian dan/atau Status Pembayaran
+     */
     public function update(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:Antrean,Diproses/Dicuci,Disetrika,Selesai & Siap Diambil,Sudah Diambil',
+            'status'            => 'nullable|in:Antrean,Diproses/Dicuci,Disetrika,Selesai & Siap Diambil,Sudah Diambil',
+            'status_pembayaran' => 'nullable|in:Lunas,Belum Lunas',
         ]);
 
         $transaksi = Transaksi::findOrFail($id);
-        $transaksi->status_cucian = $request->status;
+
+        // Update status cucian jika dikirim dari form
+        if ($request->filled('status')) {
+            $transaksi->status_cucian = $request->status;
+        }
+
+        // Update status pembayaran jika dikirim dari tombol toggle
+        if ($request->filled('status_pembayaran')) {
+            $transaksi->status_pembayaran = $request->status_pembayaran;
+        }
+
         $transaksi->save();
 
-        return back()->with('success', 'Status cucian berhasil diperbarui!');
+        return back()->with('success', 'Data transaksi berhasil diperbarui!');
     }
 
     public function destroy($id)
