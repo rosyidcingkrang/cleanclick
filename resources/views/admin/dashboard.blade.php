@@ -11,6 +11,7 @@
 <body class="bg-slate-50 min-h-screen p-6 text-slate-800 antialiased">
     <div class="max-w-7xl mx-auto">
         
+        {{-- Header Navigation --}}
         <div class="flex justify-between items-center mb-8 bg-white p-4 rounded-2xl shadow-xs border border-slate-100">
             <div>
                 <h1 class="text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">CleanClick Admin</h1>
@@ -22,26 +23,43 @@
             </form>
         </div>
 
+        {{-- Filter Tanggal Laporan --}}
         <form action="{{ route('admin.dashboard') }}" method="GET" class="flex items-center gap-2 mb-4">
-    <input type="date" name="filter_date" value="{{ request('filter_date', date('Y-m-d')) }}" class="border border-slate-300 p-2 rounded-lg text-sm">
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
-        Filter Tanggal
-    </button>
-</form>
+            <input type="date" name="tanggal" value="{{ $selectedDate }}" class="border border-slate-300 p-2 rounded-lg text-sm bg-white focus:outline-blue-500">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition cursor-pointer">
+                Filter Tanggal
+            </button>
+        </form>
 
+        {{-- Card Total Pendapatan --}}
         <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-6 rounded-2xl shadow-md mb-8">
-            <span class="text-xs uppercase tracking-widest font-bold opacity-75">Laporan Keuangan Hari Ini (Lunas)</span>
+            <span class="text-xs uppercase tracking-widest font-bold opacity-75">
+                Laporan Keuangan ({{ \Carbon\Carbon::parse($selectedDate)->translatedFormat('d F Y') }})
+            </span>
             <h2 class="text-4xl font-black mt-1">Rp {{ number_format($totalPendapatanHariIni, 0, ',', '.') }}</h2>
         </div>
 
+        {{-- Alert Notifikasi --}}
         @if(session('success'))
             <div class="bg-emerald-50 text-emerald-700 p-4 rounded-xl mb-6 font-medium text-sm border border-emerald-100 shadow-xs">
                 ✅ {{ session('success') }}
             </div>
         @endif
 
+        @if($errors->any())
+            <div class="bg-rose-50 text-rose-700 p-4 rounded-xl mb-6 font-medium text-sm border border-rose-100 shadow-xs">
+                ⚠️ Mohon periksa kembali inputan Anda:
+                <ul class="list-disc list-inside mt-1 text-xs">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
+            {{-- Form Tambah Order --}}
             <div class="bg-white p-6 rounded-2xl shadow-xs border border-slate-100 h-fit">
                 <h3 class="text-lg font-bold text-slate-800 mb-4">Pencatatan Order Baru</h3>
                 <form action="{{ route('admin.transaksi.store') }}" method="POST" class="space-y-4">
@@ -54,6 +72,7 @@
                             </button>
                         </div>
                         <select name="user_id" class="w-full border border-slate-200 bg-slate-50/50 p-2.5 rounded-xl text-sm focus:outline-blue-500 text-slate-700" required>
+                            <option value="" disabled selected>-- Pilih Pelanggan --</option>
                             @foreach($pelanggan as $p) 
                                 <option value="{{ $p->id }}">{{ $p->name }} ({{ $p->whatsapp ?? '-' }})</option> 
                             @endforeach
@@ -62,6 +81,7 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Pilih Layanan Cucian</label>
                         <select name="id_layanan" class="w-full border border-slate-200 bg-slate-50/50 p-2.5 rounded-xl text-sm focus:outline-blue-500 text-slate-700" required>
+                            <option value="" disabled selected>-- Pilih Layanan --</option>
                             @foreach($layanan as $l) 
                                 <option value="{{ $l->id_layanan }}">{{ $l->nama_layanan }} - Rp {{ number_format($l->harga_satuan) }}/{{ $l->satuan }}</option> 
                             @endforeach
@@ -79,8 +99,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Metode Pembayaran (Opsional)</label>
-                        <select name="metode_pembayaran" class="w-full border border-slate-200 bg-slate-50/50 p-2.5 rounded-xl text-sm focus:outline-blue-500 text-slate-700">
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Metode Pembayaran</label>
+                        <select name="metode_pembayaran" class="w-full border border-slate-200 bg-slate-50/50 p-2.5 rounded-xl text-sm focus:outline-blue-500 text-slate-700" required>
                             <option value="Tunai">Tunai</option>
                             <option value="QRIS">QRIS</option>
                             <option value="Transfer">Transfer</option>
@@ -92,6 +112,7 @@
                 </form>
             </div>
 
+            {{-- Tabel Monitoring Antrean --}}
             <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-xs border border-slate-100 h-fit">
                 <h3 class="text-lg font-bold text-slate-800 mb-4">Monitoring Antrean Berjalan</h3>
                 <div class="overflow-x-auto">
@@ -106,18 +127,19 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 text-slate-700">
-                            @foreach($transaksi as $t)
+                            @forelse($transaksi as $t)
                             <tr class="hover:bg-slate-50/60 transition">
-                                <td class="p-3 font-mono text-blue-600 font-bold">{{ $t->no_nota }}</td>
+                                <td class="p-3 font-mono text-blue-600 font-bold">{{ $t->no_nota ?? '-' }}</td>
                                 <td class="p-3">
-                                    <div class="font-bold text-slate-800">{{ $t->user->name }}</div>
+                                    <div class="font-bold text-slate-800">{{ $t->user->name ?? 'Pelanggan Tidak Ditemukan' }}</div>
                                     <div class="text-[10px] text-slate-400 font-mono mt-0.5">{{ $t->user->whatsapp ?? '-' }}</div>
                                 </td>
                                 
                                 <td class="p-3 text-center">
                                     @php
+                                        $namaUser = $t->user->name ?? 'Pelanggan';
                                         $pesanWA = urlencode(
-                                            "Halo *" . $t->user->name . "*, Berikut nota laundry Anda di *CleanClick*:\n\n" .
+                                            "Halo *" . $namaUser . "*, Berikut nota laundry Anda di *CleanClick*:\n\n" .
                                             "📌 *No Nota:* " . $t->no_nota . "\n" .
                                             "🧺 *Layanan:* " . ($t->layanan->nama_layanan ?? '-') . "\n" .
                                             "⚖️ *Qty:* " . $t->quantity . " " . ($t->layanan->satuan ?? 'Kg') . "\n" .
@@ -137,7 +159,7 @@
 
                                 <td class="p-3">
                                     <div class="font-bold text-slate-900">Rp {{ number_format($t->total_harga, 0, ',', '.') }}</div>
-                                    <div class="text-[10px] font-medium text-slate-400 mt-0.5">Selesai: {{ $t->estimasi_selesai }}</div>
+                                    <div class="text-[10px] font-medium text-slate-400 mt-0.5">Selesai: {{ $t->estimasi_selesai ?? '-' }}</div>
                                     <span class="inline-block text-[9px] px-2 py-0.5 mt-1 font-bold rounded-full {{ $t->status_pembayaran == 'Lunas' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100' }}">
                                         {{ $t->status_pembayaran ?? 'Belum Lunas' }}
                                     </span>
@@ -147,6 +169,7 @@
                                     <div class="flex items-center gap-2 justify-center">
                                         <form action="{{ route('admin.transaksi.update', $t->id_transaksi ?? $t->id) }}" method="POST" class="inline">
                                             @csrf
+                                            @method('PUT')
                                             <div class="flex items-center gap-1">
                                                 <select name="status" class="border border-slate-200 bg-slate-50/50 p-1.5 rounded-xl text-xs focus:outline-blue-500 text-slate-700">
                                                     <option value="Antrean" {{ $t->status_cucian == 'Antrean' ? 'selected' : '' }}>Antrean</option>
@@ -171,7 +194,11 @@
                                     </div>
                                 </td>
                             </tr>
-                            @endforeach
+                            @empty
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-slate-400">Belum ada transaksi terdaftar.</td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -180,6 +207,7 @@
         </div>
     </div>
 
+    {{-- Modal Modal Pelanggan Baru --}}
     <div id="modalPelanggan" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center hidden z-50">
         <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-xl max-w-md w-full mx-4">
             <div class="flex justify-between items-center mb-4">
