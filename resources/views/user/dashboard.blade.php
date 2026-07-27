@@ -272,7 +272,7 @@
     <!-- TOMBOL CHAT MELAYANG (WHATSAPP) -->
     <div class="fixed bottom-6 right-6 z-50">
         @php
-            $nomor_wa = "+6281265604596"; 
+            $nomor_wa = "+6285197367932"; 
             $text = "Halo Admin CleanClick, saya ingin mengajukan komplain.\n\n"
                 . "📋 *DETAIL PELANGGAN*:\n"
                 . "• Nama: " . Auth::user()->name . "\n"
