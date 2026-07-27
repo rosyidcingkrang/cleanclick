@@ -7,6 +7,8 @@ use App\Models\Transaksi;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Exports\LaporanKeuanganExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DashboardController extends Controller
 {
@@ -22,7 +24,7 @@ class DashboardController extends Controller
     {
         $request->validate([
             'nama_pelanggan' => 'required|string|max:100',
-            'nomor_nota'     => 'required|string|max:50',
+            'nomor_nota'      => 'required|string|max:50',
         ]);
 
         $nama = trim($request->input('nama_pelanggan'));
@@ -47,7 +49,7 @@ class DashboardController extends Controller
         return view('landing', [
             'cucian'         => $hasilTransaksi,
             'nama_pelanggan' => $nama,
-            'nomor_nota'     => $nota,
+            'nomor_nota'      => $nota,
         ]);
     }
 
@@ -82,62 +84,18 @@ class DashboardController extends Controller
     }
 
     /**
-     * Unduh Laporan Keuangan berbasis Tanggal Filter (.csv / Excel)
+     * Unduh Laporan Keuangan berbasis Tanggal Filter (.xlsx)
      */
     public function downloadLaporan(Request $request)
     {
-        $selectedDate = $request->input('tanggal', now()->format('Y-m-d'));
+        // 1. Ambil tanggal dari request, jika kosong pakai tanggal hari ini
+        $tanggal = $request->input('tanggal', now()->format('Y-m-d'));
+        
+        // 2. Nama file dinamis sesuai tanggal filter
+        $filename = 'Laporan_Keuangan_CleanClick_' . $tanggal . '.xlsx';
 
-        // Filter data transaksi berdasarkan kolom 'tanggal' sesuai logic adminDashboard
-        $transaksi = Transaksi::with(['user', 'layanan'])
-            ->whereDate('tanggal', $selectedDate)
-            ->orderBy('id_transaksi', 'desc')
-            ->get();
-
-        $totalPendapatan = $transaksi->where('status_pembayaran', 'Lunas')->sum('total_harga');
-
-        $fileName = 'Laporan_Keuangan_CleanClick_' . $selectedDate . '.csv';
-
-        $headers = [
-            "Content-type"        => "text/csv; charset=UTF-8",
-            "Content-Disposition" => "attachment; filename=$fileName",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        ];
-
-        $columns = ['No Nota', 'Tanggal', 'Nama Pelanggan', 'Layanan', 'Jumlah/Berat', 'Status Bayar', 'Status Cucian', 'Total Harga'];
-
-        $callback = function() use ($transaksi, $columns, $totalPendapatan, $selectedDate) {
-            $file = fopen('php://output', 'w');
-            
-            // UTF-8 BOM untuk memastikan file CSV terbaca rapi di Microsoft Excel
-            fputs($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
-
-            // Ringkasan Laporan
-            fputcsv($file, ['LAPORAN KEUANGAN CLEANCLICK LAUNDRY']);
-            fputcsv($file, ['Filter Tanggal', $selectedDate]);
-            fputcsv($file, ['Total Pendapatan (Lunas)', 'Rp ' . number_format($totalPendapatan, 0, ',', '.')]);
-            fputcsv($file, []); 
-            fputcsv($file, $columns);
-
-            foreach ($transaksi as $t) {
-                fputcsv($file, [
-                    $t->no_nota ?? $t->id_transaksi,
-                    $t->tanggal ?? ($t->created_at ? $t->created_at->format('Y-m-d') : '-'),
-                    $t->user->name ?? '-',
-                    $t->layanan->nama_layanan ?? '-',
-                    $t->quantity,
-                    $t->status_pembayaran,
-                    $t->status_cucian,
-                    $t->total_harga
-                ]);
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        // 3. Download via Excel Export
+        return Excel::download(new LaporanKeuanganExport($tanggal), $filename);
     }
 
     public function userDashboard()
@@ -213,12 +171,10 @@ class DashboardController extends Controller
 
         $transaksi = Transaksi::findOrFail($id);
 
-        // Update status cucian jika dikirim dari form
         if ($request->filled('status')) {
             $transaksi->status_cucian = $request->status;
         }
 
-        // Update status pembayaran jika dikirim dari tombol toggle
         if ($request->filled('status_pembayaran')) {
             $transaksi->status_pembayaran = $request->status_pembayaran;
         }
