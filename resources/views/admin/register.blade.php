@@ -35,7 +35,16 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 mb-1">Nomor WhatsApp Aktif</label>
-                <input type="text" name="whatsapp" value="{{ old('whatsapp') }}" class="w-full border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-sm focus:outline-indigo-600" placeholder="08XXXXXXXXXX" required>
+                <!-- PERBAIKAN PADA INPUT WHATSAPP DI BAWAH INI -->
+                <input type="tel" 
+                       inputmode="numeric" 
+                       pattern="[0-9]*" 
+                       name="whatsapp" 
+                       value="{{ old('whatsapp') }}" 
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                       class="w-full border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-sm focus:outline-indigo-600" 
+                       placeholder="08XXXXXXXXXX" 
+                       required>
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 mb-1">Kata Sandi (Min. 6 Karakter)</label>
