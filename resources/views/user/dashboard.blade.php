@@ -68,19 +68,19 @@
                     </div>
                     
                     <!-- Input Jumlah / Berat dengan badge dinamis -->
-<div>
-    <label id="labelQuantity" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-        JUMLAH (PCS) <span class="text-red-500">*</span>
-    </label>
-    <div class="relative flex items-center">
-        <!-- step="1" dan min="1" memastikan input wajib bilangan bulat -->
-        <input type="number" name="quantity" id="quantityInput" step="1" min="1" class="w-full border border-slate-200 bg-slate-50/50 p-3 pr-16 rounded-xl text-sm focus:outline-blue-500 text-slate-800" placeholder="1" required>
-        <span id="unitBadge" class="absolute right-3 text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md pointer-events-none transition-all">
-            Pcs
-        </span>
-    </div>
-    <span class="text-[10px] text-slate-400 mt-1 block">*Masukkan jumlah dalam satuan Pcs (minimal 1)</span>
-</div>
+                    <div>
+                        <label id="labelQuantity" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                            JUMLAH (PCS) <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative flex items-center">
+                            <!-- step="1" dan min="1" memastikan input wajib bilangan bulat -->
+                            <input type="number" name="quantity" id="quantityInput" step="1" min="1" class="w-full border border-slate-200 bg-slate-50/50 p-3 pr-16 rounded-xl text-sm focus:outline-blue-500 text-slate-800" placeholder="1" required>
+                            <span id="unitBadge" class="absolute right-3 text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md pointer-events-none transition-all">
+                                Pcs
+                            </span>
+                        </div>
+                        <span class="text-[10px] text-slate-400 mt-1 block">*Masukkan jumlah dalam satuan Pcs (minimal 1)</span>
+                    </div>
                 </div>
 
                 <div class="grid md:grid-cols-2 gap-4">
@@ -123,36 +123,57 @@
         @if($transaksi->count() > 0)
             @php 
                 $activeOrder = $transaksi->first(); 
-                $currentStatus = $activeOrder->status_cucian ?? $activeOrder->status;
+                $currentStatus = $activeOrder->status_cucian ?? $activeOrder->status ?? '';
+
+                // Penentuan tingkat/step progres secara adaptif
+                $step = 1;
+                if (in_array($currentStatus, ['Diproses/Dicuci', 'Dicuci'])) {
+                    $step = 2;
+                } elseif ($currentStatus == 'Disetrika') {
+                    $step = 3;
+                } elseif (in_array($currentStatus, ['Selesai & Siap Diambil', 'Siap Ambil', 'Siap Diambil'])) {
+                    $step = 4;
+                } elseif (in_array($currentStatus, ['Sudah Diambil', 'Selesai'])) {
+                    $step = 5;
+                }
             @endphp
             
             <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm mb-12">
                 <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
                     <div>
                         <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest">Progres Pengerjaan Cucian Anda:</h4>
-                        <p class="text-sm font-bold text-slate-700 mt-1">Nota Aktif: <span class="text-blue-600">#{{ $activeOrder->id_transaksi }}</span></p>
+                        <p class="text-sm font-bold text-slate-700 mt-1">Nota Aktif: <span class="text-blue-600">#{{ $activeOrder->id_transaksi ?? $activeOrder->no_nota }}</span></p>
                     </div>
-                    <span class="text-xs bg-slate-100 text-slate-600 px-3 py-1 rounded-lg font-medium">Update Terakhir: {{ $activeOrder->updated_at->diffForHumans() ?? $activeOrder->tanggal }}</span>
+                    <span class="text-xs bg-slate-100 text-slate-600 px-3 py-1 rounded-lg font-medium">Update Terakhir: {{ $activeOrder->updated_at ? $activeOrder->updated_at->diffForHumans() : ($activeOrder->tanggal ?? '-') }}</span>
                 </div>
 
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
-                    <div class="p-4 rounded-2xl border transition duration-300 flex flex-col items-center justify-center gap-2 {{ $currentStatus == 'Antrean' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border-slate-200 text-slate-400' }}">
+                    <!-- Step 1: Antrean -->
+                    <div class="p-4 rounded-2xl border transition duration-300 flex flex-col items-center justify-center gap-2 {{ $step >= 1 ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border-slate-200 text-slate-400' }}">
                         <span class="text-2xl">📥</span>
                         <span class="text-xs font-bold tracking-tight">1. Antrean</span>
                     </div>
-                    <div class="p-4 rounded-2xl border transition duration-300 flex flex-col items-center justify-center gap-2 {{ $currentStatus == 'Dicuci' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border-slate-200 text-slate-400' }}">
+
+                    <!-- Step 2: Dicuci -->
+                    <div class="p-4 rounded-2xl border transition duration-300 flex flex-col items-center justify-center gap-2 {{ $step >= 2 ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border-slate-200 text-slate-400' }}">
                         <span class="text-2xl">🧼</span>
                         <span class="text-xs font-bold tracking-tight">2. Dicuci</span>
                     </div>
-                    <div class="p-4 rounded-2xl border transition duration-300 flex flex-col items-center justify-center gap-2 {{ $currentStatus == 'Disetrika' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border-slate-200 text-slate-400' }}">
+
+                    <!-- Step 3: Disetrika -->
+                    <div class="p-4 rounded-2xl border transition duration-300 flex flex-col items-center justify-center gap-2 {{ $step >= 3 ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border-slate-200 text-slate-400' }}">
                         <span class="text-2xl">💨</span>
                         <span class="text-xs font-bold tracking-tight">3. Disetrika</span>
                     </div>
-                    <div class="p-4 rounded-2xl border transition duration-300 flex flex-col items-center justify-center gap-2 {{ $currentStatus == 'Siap Ambil' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border-slate-200 text-slate-400' }}">
+
+                    <!-- Step 4: Siap Ambil -->
+                    <div class="p-4 rounded-2xl border transition duration-300 flex flex-col items-center justify-center gap-2 {{ $step >= 4 ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border-slate-200 text-slate-400' }}">
                         <span class="text-2xl">✨</span>
                         <span class="text-xs font-bold tracking-tight">4. Siap Ambil</span>
                     </div>
-                    <div class="p-4 rounded-2xl border transition duration-300 flex flex-col items-center justify-center gap-2 col-span-2 sm:col-span-1 {{ $currentStatus == 'Selesai' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border-slate-200 text-slate-400' }}">
+
+                    <!-- Step 5: Selesai -->
+                    <div class="p-4 rounded-2xl border transition duration-300 flex flex-col items-center justify-center gap-2 col-span-2 sm:col-span-1 {{ $step >= 5 ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border-slate-200 text-slate-400' }}">
                         <span class="text-2xl">✅</span>
                         <span class="text-xs font-bold tracking-tight">5. Selesai</span>
                     </div>
@@ -177,7 +198,7 @@
                     <tbody class="divide-y divide-slate-100 text-slate-700">
                         @forelse($transaksi as $t)
                         <tr>
-                            <td class="py-4 px-4 font-bold text-blue-600">#{{ $t->id_transaksi }}</td>
+                            <td class="py-4 px-4 font-bold text-blue-600">#{{ $t->id_transaksi ?? $t->no_nota }}</td>
                             <td class="py-4 px-4">{{ $t->tanggal }}</td>
                             <td class="py-4 px-4">{{ $t->layanan->nama_layanan ?? 'Kiloan' }}</td>
                             <td class="py-4 px-4">{{ $t->quantity }}</td>
@@ -277,7 +298,7 @@
                 . "📋 *DETAIL PELANGGAN*:\n"
                 . "• Nama: " . Auth::user()->name . "\n"
                 . "• ID Pelanggan: USER-" . Auth::id() . "\n"
-                . "• ID Nota / Transaksi: " . ($transaksi_terakhir->id_nota ?? 'Belum ada transaksi') . "\n\n"
+                . "• ID Nota / Transaksi: " . ($transaksi->first()->id_transaksi ?? $transaksi->first()->no_nota ?? 'Belum ada transaksi') . "\n\n"
                 . "⚠️ *Rincian Kendala / Keluhan*:\n"
                 . "[Tuliskan keluhan Anda di sini...]\n\n"
                 . "Mohon bantuannya untuk segera diproses, terima kasih.";
