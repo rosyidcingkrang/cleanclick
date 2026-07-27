@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Transaksi;
 use App\Models\Layanan;
+use App\Models\Transaksi;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -21,7 +22,7 @@ class DashboardController extends Controller
     {
         $request->validate([
             'nama_pelanggan' => 'required|string|max:100',
-            'nomor_nota'     => 'required|string|max:50',
+            'nomor_nota'      => 'required|string|max:50',
         ]);
 
         $nama = trim($request->input('nama_pelanggan'));
@@ -46,35 +47,38 @@ class DashboardController extends Controller
         return view('landing', [
             'cucian'         => $hasilTransaksi,
             'nama_pelanggan' => $nama,
-            'nomor_nota'     => $nota
+            'nomor_nota'      => $nota,
         ]);
     }
 
     public function adminDashboard(Request $request)
     {
-        // 1. Tangkap tanggal dari form filter (jika kosong, default ke tanggal hari ini)
-        $selectedDate = $request->input('tanggal', date('Y-m-d'));
+        // 1. Tangkap tanggal filter (default hari ini)
+        $selectedDate = $request->input('tanggal', now()->format('Y-m-d'));
 
-        // 2. Menghitung total pendapatan BERDASARKAN TANGGAL YANG DIPILIH
-        $totalPendapatanHariIni = Transaksi::where(function ($q) use ($selectedDate) {
-                $q->whereDate('tanggal', $selectedDate)
-                  ->orWhereDate('created_at', $selectedDate);
-            })
+        // 2. Total pendapatan hari/tanggal terpilih (Optimasi query date)
+        $totalPendapatanHariIni = Transaksi::whereDate('tanggal', $selectedDate)
             ->where('status_pembayaran', 'Lunas')
             ->sum('total_harga');
 
-        // 3. Menampilkan SEMUA transaksi/antrean (termasuk kemarin & hari-hari sebelumnya)
+        // 3. Menampilkan antrean & data pendukung
         $transaksi = Transaksi::with(['user', 'layanan'])
             ->orderBy('id_transaksi', 'desc')
             ->get();
-            
+
         $layanan = Layanan::all();
-        
+
         $pelanggan = User::whereIn('role', ['user', 'pelanggan'])
             ->orderBy('name', 'asc')
             ->get();
 
-        return view('admin.dashboard', compact('totalPendapatanHariIni', 'transaksi', 'layanan', 'pelanggan', 'selectedDate'));
+        return view('admin.dashboard', compact(
+            'totalPendapatanHariIni',
+            'transaksi',
+            'layanan',
+            'pelanggan',
+            'selectedDate'
+        ));
     }
 
     public function userDashboard()
@@ -99,36 +103,44 @@ class DashboardController extends Controller
             'metode_pembayaran' => 'required|string',
         ]);
 
-        $layanan = Layanan::findOrFail($request->id_layanan);
-        $totalHarga = $layanan->harga_satuan * $request->quantity;
+        // Gunakan Database Transaction untuk mencegah race condition / nota duplikat
+        DB::transaction(function () use ($request) {
+            $layanan = Layanan::findOrFail($request->id_layanan);
+            $totalHarga = $layanan->harga_satuan * $request->quantity;
 
-        $transaksi = new Transaksi();
-        
-        $transaksi->user_id = $request->filled('user_id') ? $request->user_id : auth()->id(); 
-        
-        $transaksi->id_layanan        = $request->id_layanan;
-        $transaksi->quantity          = $request->quantity;
-        $transaksi->total_harga       = $totalHarga; 
-        $transaksi->status_pembayaran = $request->status_pembayaran;
-        $transaksi->metode_pembayaran = ucfirst(strtolower($request->metode_pembayaran));
-        $transaksi->status_cucian     = 'Antrean';
-        
-        // Otomatisasi Nomor Nota
-        $hariIni = now()->format('Ymd');
-        $transaksiTerakhirHariIni = Transaksi::whereDate('created_at', now()->today())
-            ->orderBy('id_transaksi', 'desc')
-            ->first();
+            // Proteksi: Jika bukan admin, paksa user_id milik user yang sedang login
+            $userId = auth()->user()->role === 'admin' && $request->filled('user_id')
+                ? $request->user_id
+                : auth()->id();
 
-        $urutan = 1;
-        if ($transaksiTerakhirHariIni && $transaksiTerakhirHariIni->no_nota) {
-            $parts = explode('-', $transaksiTerakhirHariIni->no_nota);
-            $urutanTerakhir = (int) end($parts);
-            $urutan = $urutanTerakhir + 1;
-        }
+            // Otomatisasi Nomor Nota dengan Lock untuk keamanan concurrency
+            $hariIni = now()->format('Ymd');
+            $transaksiTerakhirHariIni = Transaksi::whereDate('created_at', now()->today())
+                ->lockForUpdate()
+                ->orderBy('id_transaksi', 'desc')
+                ->first();
 
-        $transaksi->no_nota = 'INV-' . $hariIni . '-' . str_pad($urutan, 3, '0', STR_PAD_LEFT);
-        $transaksi->tanggal = now()->format('Y-m-d');
-        $transaksi->save();
+            $urutan = 1;
+            if ($transaksiTerakhirHariIni && $transaksiTerakhirHariIni->no_nota) {
+                $parts = explode('-', $transaksiTerakhirHariIni->no_nota);
+                $urutanTerakhir = (int) end($parts);
+                $urutan = $urutanTerakhir + 1;
+            }
+
+            $noNota = 'INV-' . $hariIni . '-' . str_pad($urutan, 3, '0', STR_PAD_LEFT);
+
+            Transaksi::create([
+                'user_id'           => $userId,
+                'id_layanan'        => $request->id_layanan,
+                'quantity'          => $request->quantity,
+                'total_harga'       => $totalHarga,
+                'status_pembayaran' => $request->status_pembayaran,
+                'metode_pembayaran' => ucfirst(strtolower($request->metode_pembayaran)),
+                'status_cucian'     => 'Antrean',
+                'no_nota'           => $noNota,
+                'tanggal'           => now()->format('Y-m-d'),
+            ]);
+        });
 
         return redirect()->back()->with('success', 'Transaksi Laundry Baru Berhasil Disimpan!');
     }
@@ -136,12 +148,12 @@ class DashboardController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:Antrean,Diproses/Dicuci,Disetrika,Selesai & Siap Diambil,Sudah Diambil'
+            'status' => 'required|in:Antrean,Diproses/Dicuci,Disetrika,Selesai & Siap Diambil,Sudah Diambil',
         ]);
 
         $transaksi = Transaksi::findOrFail($id);
-        $transaksi->status_cucian = $request->status; 
-        $transaksi->save(); 
+        $transaksi->status_cucian = $request->status;
+        $transaksi->save();
 
         return back()->with('success', 'Status cucian berhasil diperbarui!');
     }
@@ -164,15 +176,13 @@ class DashboardController extends Controller
             'whatsapp' => 'required|string|max:20',
         ]);
 
-        $pelanggan = new User();
-        $pelanggan->name     = $request->name;
-        $pelanggan->whatsapp = $request->whatsapp;
-        $pelanggan->role     = 'user'; 
-        
-        $pelanggan->email    = 'offline_' . time() . rand(10, 99) . '@cleanclick.com';
-        $pelanggan->password = bcrypt('cleanclick123'); 
-        
-        $pelanggan->save();
+        $pelanggan = User::create([
+            'name'     => $request->name,
+            'whatsapp' => $request->whatsapp,
+            'role'     => 'user',
+            'email'    => 'offline_' . time() . rand(10, 99) . '@cleanclick.com',
+            'password' => bcrypt('cleanclick123'),
+        ]);
 
         return redirect()->back()->with('success', 'Pelanggan baru bernama "' . $pelanggan->name . '" berhasil ditambahkan!');
     }
