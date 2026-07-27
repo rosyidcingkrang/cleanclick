@@ -13,8 +13,7 @@ use App\Http\Controllers\ComplaintController;
 */
 Route::get('/', [DashboardController::class, 'landingPage'])->name('landing');
 
-// Alias nama route untuk cek progres cucian
-Route::post('/cek-laundry', [DashboardController::class, 'cekProgresCucian'])->name('laundry.cek');
+// Cek progres cucian tanpa login
 Route::post('/cek-progres', [DashboardController::class, 'cekProgresCucian'])->name('cek.progres');
 
 
@@ -23,11 +22,11 @@ Route::post('/cek-progres', [DashboardController::class, 'cekProgresCucian'])->n
 | 2. GERBANG AUTENTIKASI ADMIN
 |--------------------------------------------------------------------------
 */
-Route::get('admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');
-Route::post('admin/login', [AuthController::class, 'adminLogin'])->name('admin.login.submit');
+Route::get('/admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');
+Route::post('/admin/login', [AuthController::class, 'adminLogin'])->name('admin.login.submit');
 
-Route::get('admin/register', [AuthController::class, 'showAdminRegister'])->name('admin.register');
-Route::post('admin/register', [AuthController::class, 'adminRegister'])->name('admin.register.submit');
+Route::get('/admin/register', [AuthController::class, 'showAdminRegister'])->name('admin.register');
+Route::post('/admin/register', [AuthController::class, 'adminRegister'])->name('admin.register.submit');
 
 
 /*
@@ -63,16 +62,17 @@ Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    // Manajemen Transaksi & Pelanggan
+    // Dashboard & Filter Tanggal
     Route::get('/dashboard', [DashboardController::class, 'adminDashboard'])->name('dashboard');
+    
+    // Transaksi & Pelanggan
     Route::post('/transaksi', [DashboardController::class, 'storeTransaksi'])->name('transaksi.store');
-    
-    // Menerima POST, PUT, dan PATCH untuk update status agar tidak Mismatch Method
-    Route::match(['post', 'put', 'patch'], '/transaksi/update/{id}', [DashboardController::class, 'update'])->name('transaksi.update');
-    
-    Route::get('/transaksi/email/{id}', [DashboardController::class, 'kirimEmail'])->name('transaksi.email');
+    Route::put('/transaksi/update/{id}', [DashboardController::class, 'update'])->name('transaksi.update');
     Route::delete('/transaksi/delete/{id}', [DashboardController::class, 'destroy'])->name('transaksi.destroy');
     Route::post('/pelanggan/store', [DashboardController::class, 'storePelanggan'])->name('pelanggan.store');
+
+    // Email (Opsional jika controller mendukung)
+    Route::get('/transaksi/email/{id}', [DashboardController::class, 'kirimEmail'])->name('transaksi.email');
 
     // Manajemen Komplain (Sisi Admin)
     Route::get('/komplain', [ComplaintController::class, 'indexAdmin'])->name('komplain.index');
