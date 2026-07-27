@@ -17,10 +17,15 @@
                 <h1 class="text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">CleanClick Admin</h1>
                 <p class="text-xs text-slate-400">Petugas Aktif: {{ auth()->user()->name }}</p>
             </div>
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button type="submit" class="bg-rose-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-rose-600 transition cursor-pointer">Keluar</button>
-            </form>
+            <div class="flex items-center gap-3">
+                <a href="{{ route('admin.komplain.index') }}" class="bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-1.5">
+                    💬 Komplain Pelanggan
+                </a>
+                <form action="{{ route('logout') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="bg-rose-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-rose-600 transition cursor-pointer">Keluar</button>
+                </form>
+            </div>
         </div>
 
         {{-- Filter Tanggal Laporan --}}
@@ -31,12 +36,23 @@
             </button>
         </form>
 
-        {{-- Card Total Pendapatan --}}
-        <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-6 rounded-2xl shadow-md mb-8">
-            <span class="text-xs uppercase tracking-widest font-bold opacity-75">
-                Laporan Keuangan ({{ \Carbon\Carbon::parse($selectedDate)->translatedFormat('d F Y') }})
-            </span>
-            <h2 class="text-4xl font-black mt-1">Rp {{ number_format($totalPendapatanHariIni, 0, ',', '.') }}</h2>
+        {{-- Card Total Pendapatan + Tombol Unduh Laporan --}}
+        <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-6 rounded-2xl shadow-md mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <span class="text-xs uppercase tracking-widest font-bold opacity-75">
+                    Laporan Keuangan ({{ \Carbon\Carbon::parse($selectedDate)->translatedFormat('d F Y') }})
+                </span>
+                <h2 class="text-4xl font-black mt-1">Rp {{ number_format($totalPendapatanHariIni ?? 0, 0, ',', '.') }}</h2>
+            </div>
+
+            <!-- Tombol Unduh Laporan Keuangan CSV/Excel -->
+            <a href="{{ route('admin.laporan.download', ['tanggal' => $selectedDate]) }}" 
+               class="inline-flex items-center gap-2 bg-white text-teal-700 hover:bg-emerald-50 font-bold px-4 py-2.5 rounded-xl shadow-xs transition transform hover:-translate-y-0.5 text-sm cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Unduh Laporan (.csv)
+            </a>
         </div>
 
         {{-- Alert Notifikasi --}}

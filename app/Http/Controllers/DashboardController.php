@@ -81,6 +81,65 @@ class DashboardController extends Controller
         ));
     }
 
+    /**
+     * Unduh Laporan Keuangan berbasis Tanggal Filter (.csv / Excel)
+     */
+    public function downloadLaporan(Request $request)
+    {
+        $selectedDate = $request->input('tanggal', now()->format('Y-m-d'));
+
+        // Filter data transaksi berdasarkan kolom 'tanggal' sesuai logic adminDashboard
+        $transaksi = Transaksi::with(['user', 'layanan'])
+            ->whereDate('tanggal', $selectedDate)
+            ->orderBy('id_transaksi', 'desc')
+            ->get();
+
+        $totalPendapatan = $transaksi->where('status_pembayaran', 'Lunas')->sum('total_harga');
+
+        $fileName = 'Laporan_Keuangan_CleanClick_' . $selectedDate . '.csv';
+
+        $headers = [
+            "Content-type"        => "text/csv; charset=UTF-8",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $columns = ['No Nota', 'Tanggal', 'Nama Pelanggan', 'Layanan', 'Jumlah/Berat', 'Status Bayar', 'Status Cucian', 'Total Harga'];
+
+        $callback = function() use ($transaksi, $columns, $totalPendapatan, $selectedDate) {
+            $file = fopen('php://output', 'w');
+            
+            // UTF-8 BOM untuk memastikan file CSV terbaca rapi di Microsoft Excel
+            fputs($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // Ringkasan Laporan
+            fputcsv($file, ['LAPORAN KEUANGAN CLEANCLICK LAUNDRY']);
+            fputcsv($file, ['Filter Tanggal', $selectedDate]);
+            fputcsv($file, ['Total Pendapatan (Lunas)', 'Rp ' . number_format($totalPendapatan, 0, ',', '.')]);
+            fputcsv($file, []); 
+            fputcsv($file, $columns);
+
+            foreach ($transaksi as $t) {
+                fputcsv($file, [
+                    $t->no_nota ?? $t->id_transaksi,
+                    $t->tanggal ?? ($t->created_at ? $t->created_at->format('Y-m-d') : '-'),
+                    $t->user->name ?? '-',
+                    $t->layanan->nama_layanan ?? '-',
+                    $t->quantity,
+                    $t->status_pembayaran,
+                    $t->status_cucian,
+                    $t->total_harga
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function userDashboard()
     {
         $layananPilihan = Layanan::all();

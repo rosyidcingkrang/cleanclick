@@ -65,6 +65,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Dashboard & Filter Tanggal
     Route::get('/dashboard', [DashboardController::class, 'adminDashboard'])->name('dashboard');
     
+    // Fitur Download Laporan Keuangan
+    Route::get('/laporan/download', [DashboardController::class, 'downloadLaporan'])->name('laporan.download');
+    
     // Transaksi & Pelanggan
     Route::post('/transaksi', [DashboardController::class, 'storeTransaksi'])->name('transaksi.store');
     Route::put('/transaksi/update/{id}', [DashboardController::class, 'update'])->name('transaksi.update');

@@ -167,6 +167,63 @@ class AuthController extends Controller
         return view('admin.dashboard', compact('totalPendapatan', 'antreanBerjalan', 'selectedDate'));
     }
 
+    public function downloadLaporan(Request $request)
+    {
+        $selectedDate = $request->input('tanggal', date('Y-m-d'));
+
+        // Ambil data transaksi khusus tanggal yang difilter
+        $transaksi = Transaksi::with(['user', 'layanan'])
+            ->whereDate('created_at', $selectedDate)
+            ->latest()
+            ->get();
+
+        $totalPendapatan = $transaksi->where('status_pembayaran', 'Lunas')->sum('total_harga');
+
+        // Format CSV untuk dibuka langsung di Excel
+        $fileName = 'Laporan_Keuangan_CleanClick_' . $selectedDate . '.csv';
+
+        $headers = [
+            "Content-type"        => "text/csv; charset=UTF-8",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $columns = ['No Nota', 'Tanggal/Waktu', 'Nama Pelanggan', 'Layanan', 'Jumlah/Berat', 'Status Bayar', 'Status Cucian', 'Total Harga'];
+
+        $callback = function() use ($transaksi, $columns, $totalPendapatan, $selectedDate) {
+            $file = fopen('php://output', 'w');
+            
+            // UTF-8 BOM untuk memastikan karakter/format di Excel terbaca rapi
+            fputs($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // Judul & Summary Laporan
+            fputcsv($file, ['LAPORAN KEUANGAN CLEANCLICK LAUNDRY']);
+            fputcsv($file, ['Filter Tanggal', $selectedDate]);
+            fputcsv($file, ['Total Pendapatan (Lunas)', 'Rp ' . number_format($totalPendapatan, 0, ',', '.')]);
+            fputcsv($file, []); 
+            fputcsv($file, $columns);
+
+            foreach ($transaksi as $t) {
+                fputcsv($file, [
+                    $t->id_transaksi ?? $t->no_nota,
+                    $t->created_at ? $t->created_at->format('Y-m-d H:i') : ($t->tanggal ?? '-'),
+                    $t->user->name ?? $t->nama_pelanggan ?? '-',
+                    $t->layanan->nama_layanan ?? '-',
+                    $t->quantity,
+                    $t->status_pembayaran,
+                    $t->status_cucian ?? $t->status,
+                    $t->total_harga
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function userDashboard()
     {
         // Riwayat transaksi khusus user yang sedang login
