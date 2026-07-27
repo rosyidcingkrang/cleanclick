@@ -2,4 +2,4 @@
 providers = ['php']
 
 [variables]
-NIXPACKS_PHP_EXTENSIONS = 'gd, pdo_pgsql, opcache, sodium'
+NIXPACKS_PHP_EXTENSIONS = 'gd pdo_pgsql opcache sodium'
