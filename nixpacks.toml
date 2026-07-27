@@ -1,5 +1,2 @@
-[providers]
-providers = ['php']
-
-[variables]
-NIXPACKS_PHP_EXTENSIONS = 'gd pdo_pgsql opcache sodium'
+[phases.setup]
+aptPkgs = ['...', 'php-gd', 'libpng-dev', 'libjpeg-dev']
