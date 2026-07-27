@@ -1,1 +1,23 @@
 {"providers":["php"],"phpExtensions":["gd","zip","pdo","pdo_mysql","mbstring"]}
+{
+  "phases": {
+    "build": {
+      "cmds": [
+        "composer install --optimize-autoloader --no-interaction --ignore-platform-req=ext-gd"
+      ]
+    }
+  },
+  "providers": ["php", "node"],
+  "phpExtensions": [
+    "gd",
+    "zip",
+    "pdo",
+    "pdo_mysql",
+    "mbstring",
+    "openssl",
+    "tokenizer",
+    "xml",
+    "ctype",
+    "json"
+  ]
+}
