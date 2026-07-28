@@ -60,6 +60,12 @@ class AuthController extends Controller
             'name'     => 'required|string|max:255',
             'email'    => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
+            // 🔒 Validasi server-side: nomor WA WAJIB hanya angka (regex jadi jaring pengaman
+            // kalau JS di sisi client tidak aktif / dilewati lewat paste atau autofill).
+            'whatsapp' => ['required', 'string', 'max:15', 'regex:/^[0-9]+$/'],
+            'alamat'   => ['required', 'string', 'max:1000'],
+        ], [
+            'whatsapp.regex' => 'Nomor WhatsApp hanya boleh berisi angka.',
         ]);
 
         $username = $this->generateUniqueUsername($request->email);
@@ -69,7 +75,11 @@ class AuthController extends Controller
             'username' => $username,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
-            'role'     => 'user', 
+            'role'     => 'user',
+            // 🐛 FIX: sebelumnya whatsapp & alamat sudah ditangkap dari form
+            // tapi tidak pernah disimpan ke database. Sekarang disimpan.
+            'whatsapp' => $request->whatsapp,
+            'alamat'   => $request->alamat,
         ]);
 
         return redirect()->route('login')->with('success', 'Registrasi berhasil! Silakan login.');
