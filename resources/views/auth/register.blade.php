@@ -8,7 +8,9 @@
 </head>
 <body class="bg-slate-50 flex items-center justify-center min-h-screen py-12 px-4">
     <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-xl border border-slate-200">
-        <a href="https://cleanclickselflaundry.blogspot.com/?fbclid=PAb21jcAS7_gBleHRuA2FlbQIxMQBzcnRjBmFwcF9pZA81NjcwNjczNDMzNTI0MjcAAad9GsDWvYhVnx6Unj2Xrh7IHoKNQrlUgicSK9E32Ef9xjNEWFhivSlclaK6hQ_aem_eHAz8V7PR44ZYfyzBtJFGQ&m=1&utm_source=ig&utm_medium=social&utm_content=link_in_bio" target="_blank"  space-x-2 group transition transform hover:scale-105"><h2 class="text-3xl font-black text-center text-slate-800 mb-2">CleanClick<span class="text-blue-600">.</span></h2></a>
+        <a href="https://cleanclickselflaundry.blogspot.com/?fbclid=PAb21jcAS7_gBleHRuA2FlbQIxMQBzcnRjBmFwcF9pZA81NjcwNjczNDMzNTI0MjcAAad9GsDWvYhVnx6Unj2Xrh7IHoKNQrlUgicSK9E32Ef9xjNEWFhivSlclaK6hQ_aem_eHAz8V7PR44ZYfyzBtJFGQ&m=1&utm_source=ig&utm_medium=social&utm_content=link_in_bio" target="_blank" class="block space-x-2 group transition transform hover:scale-105">
+            <h2 class="text-3xl font-black text-center text-slate-800 mb-2">CleanClick<span class="text-blue-600">.</span></h2>
+        </a>
         <p class="text-center text-sm text-slate-500 mb-8">Buat akun pelanggan Anda untuk mulai menikmati layanan premium</p>
 
         <form action="{{ url('/register') }}" method="POST" class="space-y-6">
@@ -33,11 +35,22 @@
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">No. WhatsApp</label>
-                        <input type="text" name="whatsapp" value="{{ old('whatsapp') }}" class="w-full border border-slate-200 p-3 rounded-xl text-sm focus:outline-blue-500" placeholder="08xxxxxxxxxx" required>
+                        <!-- BAGIAN YANG DIUPDATE: type="tel", inputmode="numeric", dan event oninput -->
+                        <input 
+                            type="tel" 
+                            name="whatsapp" 
+                            value="{{ old('whatsapp') }}" 
+                            class="w-full border border-slate-200 p-3 rounded-xl text-sm focus:outline-blue-500" 
+                            placeholder="08xxxxxxxxxx" 
+                            inputmode="numeric"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                            required>
+                        @error('whatsapp') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Alamat Rumah Lengkap</label>
                         <input type="text" name="alamat" value="{{ old('alamat') }}" class="w-full border border-slate-200 p-3 rounded-xl text-sm focus:outline-blue-500" placeholder="Nama Jalan, Blok, No. Rumah" required>
+                        @error('alamat') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
                     </div>
                 </div>
 
