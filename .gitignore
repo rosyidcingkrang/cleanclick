@@ -1,27 +1,35 @@
-*.log
-.DS_Store
+# Environment
 .env
-.env.backup
-.env.production
-.phpactor.json
-.phpunit.result.cache
-/.codex
-/.cursor/
-/.idea
-/.nova
-/.phpunit.cache
-/.vscode
-/.zed
-/auth.json
-/node_modules
-/public/build
-/public/fonts-manifest.dev.json
-/public/hot
-/public/storage
-/storage/*.key
-/storage/pail
+.env.*
+!.env.example
+
+# Dependencies (Jangan mengabaikan composer.lock!)
 /vendor
-_ide_helper.php
-Homestead.json
-Homestead.yaml
+/node_modules
+
+# Laravel specific
+/public/storage
+/public/build
+/public/hot
+
+# Storage & Logs
+storage/*.key
+storage/logs/*
+!storage/logs/.gitkeep
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+!storage/framework/.gitkeep
+
+# Testing & Caches
+.phpunit.result.cache
+*.sqlite
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
 Thumbs.db
+*.swp
+*.swo
+*~
