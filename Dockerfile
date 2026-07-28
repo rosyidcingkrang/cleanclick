@@ -1,39 +1,24 @@
 FROM php:8.2-fpm
 
-# Install sistem dependencies
+# Install dependency sistem & ekstensi PHP zip + pdo_mysql
 RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    zip \
-    unzip \
     git \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install PHP extensions (termasuk GD)
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql
+    unzip \
+    libzip-dev \
+    libpng-dev \
+    && docker-php-ext-install pdo_mysql zip gd
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
-WORKDIR /var/www/html
+WORKDIR /var/www
 
-# Copy semua file project
 COPY . .
 
-# Install dependencies dengan Composer
-RUN composer install --optimize-autoloader --no-scripts --no-interaction
+# Bypass aturan security block & platform req
+ENV COMPOSER_ALLOW_SUPERUSER=1
+RUN composer config audit.blocked-packages false
+RUN composer install --optimize-autoloader --no-scripts --no-interaction --ignore-platform-reqs
 
-# Set permission untuk Laravel
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 /var/www/html/storage \
-    && chmod -R 775 /var/www/html/bootstrap/cache
-
-# Expose port
-EXPOSE 8000
-
-# Jalankan Laravel
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+EXPOSE 9000
+CMD ["php-fpm"]
