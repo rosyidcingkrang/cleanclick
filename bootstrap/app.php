@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Session\TokenMismatchException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,9 +17,14 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // 2. Daftarkan alias middleware 'role' di sini:
         $middleware->alias([
-            'role' => \App\Http\Middleware\CheckRole::class, // Sesuaikan dengan nama class middleware role kamu
+            'role' => \App\Http\Middleware\CheckRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Tangani 419 (CSRF token expired) dengan redirect + pesan,
+        // bukan halaman kosong yang membingungkan admin.
+        $exceptions->render(function (TokenMismatchException $e, $request) {
+            return redirect()->back()
+                ->with('error', 'Sesi Anda telah berakhir. Silakan coba lagi.');
+        });
     })->create();
