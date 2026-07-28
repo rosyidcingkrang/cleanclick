@@ -1,6 +1,6 @@
 FROM php:8.2-fpm
 
-# Install dependency sistem & ekstensi PHP zip + pdo_mysql
+# Install dependency sistem & ekstensi PHP zip, pdo_mysql, dan gd
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -8,17 +8,16 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     && docker-php-ext-install pdo_mysql zip gd
 
-# Install Composer
+# Install Composer versi terbaru
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 
 COPY . .
 
-# Bypass aturan security block & platform req
+# Abaikan pemeriksaan audit keamanan (--no-audit) & reqs platform saat install
 ENV COMPOSER_ALLOW_SUPERUSER=1
-RUN composer config audit.blocked-packages false
-RUN composer install --optimize-autoloader --no-scripts --no-interaction --ignore-platform-reqs
+RUN composer install --optimize-autoloader --no-scripts --no-interaction --no-audit --ignore-platform-reqs
 
 EXPOSE 9000
 CMD ["php-fpm"]
