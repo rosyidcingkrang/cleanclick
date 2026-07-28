@@ -32,8 +32,14 @@ class DashboardController extends Controller
 
         $hasilTransaksi = Transaksi::with(['user', 'layanan'])
             ->where(function ($q) use ($nota) {
-                $q->where('no_nota', $nota)
-                  ->orWhere('id_transaksi', $nota);
+                $q->where('no_nota', $nota);
+                // 🐛 FIX: id_transaksi bertipe bigint di PostgreSQL. Membandingkannya
+                // langsung dengan teks (mis. "INV-20260728-003") menyebabkan
+                // SQLSTATE[22P02] "invalid input syntax for type bigint".
+                // Jadi kondisi ini hanya dijalankan kalau nota-nya benar-benar angka.
+                if (is_numeric($nota)) {
+                    $q->orWhere('id_transaksi', $nota);
+                }
             })
             ->whereHas('user', function ($query) use ($nama) {
                 $query->where('name', 'like', '%' . $nama . '%');
